@@ -1,74 +1,129 @@
 package io.github.i4xx.sql;
 
-import io.github.i4xx.sql.curd.SafeCurd;
+import io.github.i4xx.sql.curd.Delete;
+import io.github.i4xx.sql.curd.Insert;
 import io.github.i4xx.sql.curd.Select;
-import io.github.i4xx.sql.model.Page;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.SingleColumnRowMapper;
+import io.github.i4xx.sql.curd.Update;
+import io.github.i4xx.sql.model.IdModel;
+import io.github.i4xx.sql.model.Meta;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
-import javax.annotation.Resource;
+import java.io.Serializable;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public class SqlTemplate {
+public class SqlTemplate<T, ID extends Serializable> extends QueryTemplate {
 
-    @Resource
-    protected JdbcTemplate jdbcTemplate;
-    @Autowired(required = false)
-    protected SafeCurd safeCurd;
+    protected Meta<T> meta;
+    protected Class<T> clazz;
+    protected Class<ID> idClass;
 
-    public <T> List<T> list(Select<T> select) {
-        select.safe();
-
-        return query(select.getSql(), select.conditionParams(), select.getClazz());
+    public SqlTemplate() {
+        ParameterizedType parameterizedType = (ParameterizedType) this.getClass().getGenericSuperclass();
+        Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
+        this.clazz = (Class<T>) actualTypeArguments[0];
+        this.idClass = (Class<ID>) actualTypeArguments[1];
+        this.meta = Meta.getInstance(clazz);
     }
 
-    public <T> int count(Select<T> select) {
-        select.safe();
-        Integer count = queryForObject(
-                select.getCountSql(),
-                select.conditionParams(),
-                Integer.class);
-        return count == null ? 0 : count;
-    }
+    public int insert(T t) {
+        Insert<T> insert = Insert.build(t);
 
-    public <T> Page<T> page(Select<T> select) {
-        select.safe();
+        if (t instanceof IdModel && ((IdModel) t).getId() == null) {
+            KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        Integer count = queryForObject(select.getCountSql(), select.conditionParams(), Integer.class);
-        count = count == null ? 0 : count;
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(insert.getSql(), Statement.RETURN_GENERATED_KEYS);
+                int i = 0;
+                for (Object p : insert.getParams()) {
+                    i++;
+                    ps.setObject(i, p);
+                }
+                return ps;
+            }, keyHolder);
 
-        Page<T> page = new Page<>(count);
-        if (select.getMinIndex() > count) {
-            return page;
+            ((IdModel) t).setId(keyHolder.getKey().intValue());
+
+            return 1;
         }
 
-        page.setList(list(select));
-        return page;
+        return update(insert.getSql(), insert.getParams());
     }
 
-    public <T> List<T> query(String sql, Object[] params, Class<T> clazz) {
-        if (Integer.class.equals(clazz) || Long.class.equals(clazz) || Boolean.class.equals(clazz) || String.class.equals(clazz)) {
-            return jdbcTemplate.query(
-                    sql,
-                    params,
-                    new SingleColumnRowMapper<>(clazz)
-            );
-        } else {
-            return jdbcTemplate.query(
-                    sql,
-                    params,
-                    new BeanPropertyRowMapper<>(clazz)
-            );
+    public int batchInsert(List<T> list) {
+        if (list == null || list.isEmpty()) {
+            return 0;
         }
+
+        Insert<T> insert = Insert.build(clazz);
+        List<Object[]> params = new ArrayList<>(list.size());
+        list.forEach(i -> params.add(insert.getParams(i)));
+
+        int[] ints = jdbcTemplate.batchUpdate(insert.getSql(), params);
+        return Arrays.stream(ints).sum();
     }
 
-    public <T> T queryForObject(String sql, Object[] params, Class<T> clazz) {
-        if (Integer.class.equals(clazz) || Long.class.equals(clazz) || Boolean.class.equals(clazz) || String.class.equals(clazz)) {
-            return jdbcTemplate.queryForObject(sql, params, clazz);
-        } else {
-            return jdbcTemplate.queryForObject(sql, params, new BeanPropertyRowMapper<>(clazz));
+    public int update(Update<T> update) {
+        update.safe();
+
+        List<Object> conditionParams = update.getParams();
+        if (conditionParams == null || conditionParams.isEmpty()) {
+            throw new RuntimeException("warning: condition params is empty");
         }
+
+        List<Object> params = new ArrayList<>();
+        params.addAll(update.getUpdateParams());
+        params.addAll(conditionParams);
+
+        return update(
+                String.format("update %s set %s ", meta.getTableName(), update.getUpdateColumns()) + update.conditionSql(),
+                params.toArray()
+
+        );
     }
+
+    public int batchUpdate(List<T> list) {
+        if (list == null || list.isEmpty()) {
+            return 0;
+        }
+
+        Update<T> update = Update.build(clazz).ifNullSet(list.get(0));
+        List<Object[]> params = new ArrayList<>(list.size());
+        list.forEach(i -> params.add(update.getParams(i)));
+
+        int[] ints = jdbcTemplate.batchUpdate(update.getSetSql(), params);
+        return Arrays.stream(ints).sum();
+    }
+
+    public T select(ID id) {
+        return id == null ? null : select(Select.build(clazz).id(id));
+    }
+
+    public T select(Select<T> select) {
+        select.safe();
+        return queryForObject(select.getSql(), select.conditionParams(), clazz);
+    }
+
+    public int delete(ID id) {
+        return id == null ? 0 : delete(Delete.build(clazz).id(id));
+    }
+
+    public int delete(Delete<T> delete) {
+        delete.safe();
+        return update(String.format("delete from %s %s", meta.getTableName(), delete.conditionSql()),
+                delete.conditionParams()
+        );
+    }
+
+    public int update(String sql, Object[] params) {
+        return jdbcTemplate.update(sql, params);
+    }
+
+
 }

@@ -11,7 +11,8 @@ import java.util.function.Function;
 public interface ColumnLambda<T, R> extends Function<T, R>, Serializable {
 
     default String getFieldName() {
-        return "";
+        String methodName = getMethodName();
+        return methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
     }
 
     default String getMethodName() {
