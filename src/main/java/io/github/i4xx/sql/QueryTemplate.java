@@ -1,7 +1,7 @@
 package io.github.i4xx.sql;
 
 import io.github.i4xx.sql.curd.SafeCurd;
-import io.github.i4xx.sql.curd.Select;
+import io.github.i4xx.sql.curd.LambdaSelect;
 import io.github.i4xx.sql.model.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
@@ -18,13 +18,13 @@ public class QueryTemplate {
     @Autowired(required = false)
     protected SafeCurd safeCurd;
 
-    public <T> List<T> list(Select<T> select) {
+    public <T> List<T> list(LambdaSelect<T> select) {
         select.safe();
 
         return query(select.getSql(), select.conditionParams(), select.getClazz());
     }
 
-    public <T> int count(Select<T> select) {
+    public <T> int count(LambdaSelect<T> select) {
         select.safe();
         Integer count = queryForObject(
                 select.getCountSql(),
@@ -33,7 +33,7 @@ public class QueryTemplate {
         return count == null ? 0 : count;
     }
 
-    public <T> Page<T> page(Select<T> select) {
+    public <T> Page<T> page(LambdaSelect<T> select) {
         select.safe();
 
         Integer count = queryForObject(select.getCountSql(), select.conditionParams(), Integer.class);

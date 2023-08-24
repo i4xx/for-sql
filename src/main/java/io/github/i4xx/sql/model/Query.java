@@ -1,11 +1,12 @@
 package io.github.i4xx.sql.model;
 
-import io.github.i4xx.sql.curd.Select;
+import io.github.i4xx.sql.curd.LambdaConditions;
+import io.github.i4xx.sql.curd.LambdaSelect;
 import io.github.i4xx.sql.curd.SqlKeyword;
 
 import java.util.List;
 
-public class QueryBuilder {
+public class Query {
 
     private String[] fields;
     private List<Condition> conditions;
@@ -89,8 +90,8 @@ public class QueryBuilder {
         }
     }
 
-    public <T> Select<T> build(Class<T> clazz) {
-        Select<T> select = Select.build(clazz).columns(fields);
+    public <T> LambdaSelect<T> build(Class<T> clazz) {
+        LambdaSelect<T> select = LambdaSelect.build(clazz).columns(fields);
         if (conditions != null) conditions.forEach(c -> {
             if (c.or == null || c.or.isEmpty()) {
                 if ("Field".equals(c.type)) {
@@ -100,7 +101,7 @@ public class QueryBuilder {
                 }
             } else {
                 c.or.add(0, c);
-                io.github.i4xx.sql.curd.Condition.OrCondition[] orConditions = new io.github.i4xx.sql.curd.Condition.OrCondition[c.or.size()];
+                LambdaConditions.OrCondition[] orConditions = new LambdaConditions.OrCondition[c.or.size()];
                 int i = 0;
                 for (Condition condition : c.or) {
                     orConditions[i] = oc -> {

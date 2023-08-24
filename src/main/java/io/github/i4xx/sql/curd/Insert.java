@@ -1,14 +1,12 @@
 package io.github.i4xx.sql.curd;
 
-import io.github.i4xx.sql.model.ColumnLambda;
-import io.github.i4xx.sql.model.Meta;
 import io.github.i4xx.sql.SqlUtils;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Insert<T> extends Curd<T, ColumnLambda<T, ?>, Insert<T>> {
+public class Insert<T> extends Curd<T, Insert<T>> {
 
     private String sql;
     private List<Object> params = new ArrayList<>();

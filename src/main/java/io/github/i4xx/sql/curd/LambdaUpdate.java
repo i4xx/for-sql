@@ -9,27 +9,27 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Update<T> extends Condition<T, ColumnLambda<T, ?>, Update<T>> {
+public class LambdaUpdate<T> extends LambdaConditions<T, ColumnLambda<T, ?>, LambdaUpdate<T>> implements IUpdate {
 
     private final List<String> updateColumns = new ArrayList<>();
     private final List<Object> updateParams = new ArrayList<>();
     private List<Method> setMethods;
 
-    public static <T> Update<T> build(Class<T> clazz) {
-        return new Update<>(clazz);
+    public static <T> LambdaUpdate<T> build(Class<T> clazz) {
+        return new LambdaUpdate<>(clazz);
     }
 
-    public static <T> Update<T> build(T t) {
-        Update<T> update = new Update<>((Class<T>) t.getClass());
+    public static <T> LambdaUpdate<T> build(T t) {
+        LambdaUpdate<T> update = new LambdaUpdate<>((Class<T>) t.getClass());
         update.set(t);
         return update;
     }
 
-    protected Update(Class<T> clazz) {
+    protected LambdaUpdate(Class<T> clazz) {
         super(clazz);
     }
 
-    private Update<T> set(T t) {
+    private LambdaUpdate<T> set(T t) {
         entity = t;
         List<Method> methods = meta.getMethods();
         Method method;
@@ -54,7 +54,7 @@ public class Update<T> extends Condition<T, ColumnLambda<T, ?>, Update<T>> {
         return this;
     }
 
-    public Update<T> ifNullSet(T t) {
+    public LambdaUpdate<T> ifNullSet(T t) {
         setMethods = new ArrayList<>();
         List<Method> methods = meta.getMethods();
         Method method;
@@ -85,7 +85,7 @@ public class Update<T> extends Condition<T, ColumnLambda<T, ?>, Update<T>> {
         return String.format("update %s set %s", meta.getTableName(), SqlUtils.splice(updateColumns, ","));
     }
 
-    public Update<T> set(ColumnLambda<T, ?> columnLambda, Object obj) {
+    public LambdaUpdate<T> set(ColumnLambda<T, ?> columnLambda, Object obj) {
         if (entity == null) entity = SqlUtils.newInstance(clazz);
 
         Meta<T>.Attribute attribute = meta.getAttribute(columnLambda.getMethodName());
@@ -112,9 +112,9 @@ public class Update<T> extends Condition<T, ColumnLambda<T, ?>, Update<T>> {
     public Object[] getParams(T t) {
         List<Object> params = new ArrayList<>();
         Method method;
-        for (int i = 0; i < setMethods.size(); i++) {
+        for (Method setMethod : setMethods) {
             try {
-                method = setMethods.get(i);
+                method = setMethod;
                 Object obj = method.invoke(t);
                 params.add(obj);
             } catch (Exception e) {

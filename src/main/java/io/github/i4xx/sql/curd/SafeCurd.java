@@ -46,7 +46,7 @@ public abstract class SafeCurd {
 
     public abstract List<Object> getMenu();
 
-    public <T> void safe(Curd<T, ?, ?> curd) {
+    public <T> void safe(Curd<T, ?> curd) {
         Meta<T> meta = curd.getMeta();
         List<Meta<T>.Attribute> permissionAttributes = meta.getPermissionAttributes();
         if (permissionAttributes == null || permissionAttributes.isEmpty()) return;
@@ -59,7 +59,7 @@ public abstract class SafeCurd {
         }
     }
 
-    private <T> void safeForQuery(Curd<T, ?, ?> curd, Meta<T>.Attribute permissionAttribute) {
+    private <T> void safeForQuery(Curd<T, ?> curd, Meta<T>.Attribute permissionAttribute) {
         if (curd instanceof Insert) {
             return;
         }
@@ -69,15 +69,15 @@ public abstract class SafeCurd {
         if (scopes.length == 1) {
             injectForQuery(curd, permissionAttribute, scopes[0]);
         } else if (scopes.length > 1) {
-            Condition.OrCondition[] orConditions = inject(curd, permissionAttribute, scopes);
-            ((Condition) curd).or(orConditions);
+            LambdaConditions.OrCondition[] orConditions = inject(curd, permissionAttribute, scopes);
+            ((LambdaConditions) curd).or(orConditions);
         }
 
         curd.afterInject(permissionAttribute.getColumnLambda());
     }
 
-    private <T> void safeForModify(Curd<T, ?, ?> curd, Meta<T>.Attribute permissionAttribute) {
-        if (curd instanceof Select) {
+    private <T> void safeForModify(Curd<T, ?> curd, Meta<T>.Attribute permissionAttribute) {
+        if (curd instanceof LambdaSelect) {
             return;
         }
 
@@ -88,7 +88,7 @@ public abstract class SafeCurd {
         }
     }
 
-    public <T> void safe(Curd<T, ?, ?> curd, List<T> list) {
+    public <T> void safe(Curd<T, ?> curd, List<T> list) {
         if (list == null || list.isEmpty()) {
             return;
         }
@@ -108,7 +108,7 @@ public abstract class SafeCurd {
     }
 
 
-    public <T> void injectForModify(Curd<T, ?, ?> curd, Meta<T>.Attribute permissionAttribute, Scope scope) {
+    public <T> void injectForModify(Curd<T, ?> curd, Meta<T>.Attribute permissionAttribute, Scope scope) {
         Object value = null;
         try {
             value = permissionAttribute.getGetMethod().invoke(curd.entity);
@@ -125,18 +125,18 @@ public abstract class SafeCurd {
         }
     }
 
-    public <T> void injectForQuery(Curd<T, ?, ?> curd, Meta<T>.Attribute permissionAttribute, Scope scope) {
+    public <T> void injectForQuery(Curd<T, ?> curd, Meta<T>.Attribute permissionAttribute, Scope scope) {
         List<Object> values = getScopeValues(curd, scope);
 
         if (values.size() == 1) {
-            ((Condition) curd).addCondition(permissionAttribute.getColumn(), SqlKeyword.EQ, values.get(0));
+            ((LambdaConditions) curd).addCondition(permissionAttribute.getColumn(), SqlKeyword.EQ, values.get(0));
         } else {
-            ((Condition) curd).addCondition(permissionAttribute.getColumn(), SqlKeyword.IN, values);
+            ((LambdaConditions) curd).addCondition(permissionAttribute.getColumn(), SqlKeyword.IN, values);
         }
     }
 
-    public <T> Condition.OrCondition[] inject(Curd<T, ?, ?> curd, Meta<T>.Attribute permissionAttribute, Scope[] scopes) {
-        Condition.OrCondition[] orConditions = new Condition.OrCondition[scopes.length];
+    public <T> LambdaConditions.OrCondition[] inject(Curd<T, ?> curd, Meta<T>.Attribute permissionAttribute, Scope[] scopes) {
+        LambdaConditions.OrCondition[] orConditions = new LambdaConditions.OrCondition[scopes.length];
         int i = 0;
         for (Scope scope : scopes) {
             List<Object> values = getScopeValues(curd, scope);
@@ -153,7 +153,7 @@ public abstract class SafeCurd {
         return orConditions;
     }
 
-    private <T> List<Object> getScopeValues(Curd<T, ?, ?> curd, Scope scope) {
+    private <T> List<Object> getScopeValues(Curd<T, ?> curd, Scope scope) {
         List<Object> values = new ArrayList<>();
 
         switch (scope) {

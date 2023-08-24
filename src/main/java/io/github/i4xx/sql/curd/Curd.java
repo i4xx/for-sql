@@ -5,7 +5,7 @@ import io.github.i4xx.sql.model.Meta;
 
 import java.util.List;
 
-public class Curd<T, C extends ColumnLambda<T, ?>, Children extends Curd<T, C, Children>> {
+public class Curd<T, Children extends Curd<T, Children>> {
 
     protected Meta<T> meta;
     protected Class<T> clazz;
@@ -49,5 +49,6 @@ public class Curd<T, C extends ColumnLambda<T, ?>, Children extends Curd<T, C, C
 
     public void afterInject(ColumnLambda<?, ?> columnLambda) {
     }
+
 
 }

@@ -1,9 +1,9 @@
 package io.github.i4xx.sql;
 
-import io.github.i4xx.sql.curd.Delete;
+import io.github.i4xx.sql.curd.LambdaDelete;
 import io.github.i4xx.sql.curd.Insert;
-import io.github.i4xx.sql.curd.Select;
-import io.github.i4xx.sql.curd.Update;
+import io.github.i4xx.sql.curd.LambdaSelect;
+import io.github.i4xx.sql.curd.LambdaUpdate;
 import io.github.i4xx.sql.model.IdModel;
 import io.github.i4xx.sql.model.Meta;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -69,7 +69,7 @@ public class SqlTemplate<T, ID extends Serializable> extends QueryTemplate {
         return Arrays.stream(ints).sum();
     }
 
-    public int update(Update<T> update) {
+    public int update(LambdaUpdate<T> update) {
         update.safe();
 
         List<Object> conditionParams = update.getParams();
@@ -93,7 +93,7 @@ public class SqlTemplate<T, ID extends Serializable> extends QueryTemplate {
             return 0;
         }
 
-        Update<T> update = Update.build(clazz).ifNullSet(list.get(0));
+        LambdaUpdate<T> update = LambdaUpdate.build(clazz).ifNullSet(list.get(0));
         List<Object[]> params = new ArrayList<>(list.size());
         list.forEach(i -> params.add(update.getParams(i)));
 
@@ -102,19 +102,19 @@ public class SqlTemplate<T, ID extends Serializable> extends QueryTemplate {
     }
 
     public T select(ID id) {
-        return id == null ? null : select(Select.build(clazz).id(id));
+        return id == null ? null : select(LambdaSelect.build(clazz).id(id));
     }
 
-    public T select(Select<T> select) {
+    public T select(LambdaSelect<T> select) {
         select.safe();
         return queryForObject(select.getSql(), select.conditionParams(), clazz);
     }
 
     public int delete(ID id) {
-        return id == null ? 0 : delete(Delete.build(clazz).id(id));
+        return id == null ? 0 : delete(LambdaDelete.build(clazz).id(id));
     }
 
-    public int delete(Delete<T> delete) {
+    public int delete(LambdaDelete<T> delete) {
         delete.safe();
         return update(String.format("delete from %s %s", meta.getTableName(), delete.conditionSql()),
                 delete.conditionParams()

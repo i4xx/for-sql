@@ -6,7 +6,7 @@ import io.github.i4xx.sql.model.ColumnLambda;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Select<T> extends Condition<T, ColumnLambda<T, ?>, Select<T>> {
+public class LambdaSelect<T> extends LambdaConditions<T, ColumnLambda<T, ?>, LambdaSelect<T>> implements ISelect {
 
     protected List<String> columns;
 
@@ -17,28 +17,27 @@ public class Select<T> extends Condition<T, ColumnLambda<T, ?>, Select<T>> {
 
     protected List<String> orders;
 
-    public static <T> Select<T> build(Class<T> clazz) {
-        return new Select<>(clazz);
+    public static <T> LambdaSelect<T> build(Class<T> clazz) {
+        return new LambdaSelect<>(clazz);
     }
 
-    protected Select(Class<T> clazz) {
+    protected LambdaSelect(Class<T> clazz) {
         super(clazz);
     }
 
-    public Select<T> page(Integer pageIndex, Integer pageSize) {
+    public LambdaSelect<T> page(Integer pageIndex, Integer pageSize) {
         this.pageIndex = pageIndex;
         this.pageSize = pageSize;
 
         return this;
     }
 
-
-    public Select<T> orderBy(ColumnLambda<T, ?> columnLambda, SqlKeyword keyword) {
+    public LambdaSelect<T> orderBy(ColumnLambda<T, ?> columnLambda, SqlKeyword keyword) {
         orders.add(meta.getColumnName(columnLambda.getMethodName()) + " " + keyword);
         return this;
     }
 
-    public Select<T> orderBy(String column, SqlKeyword keyword) {
+    public LambdaSelect<T> orderBy(String column, SqlKeyword keyword) {
         String columnName = meta.getColumnName(column);
         if (columnName != null) {
             orders.add(columnName + " " + keyword.getSqlSegment());
@@ -92,7 +91,7 @@ public class Select<T> extends Condition<T, ColumnLambda<T, ?>, Select<T>> {
     }
 
     @SafeVarargs
-    public final Select<T> columns(ColumnLambda<T, ?>... columnLambdas) {
+    public final LambdaSelect<T> columns(ColumnLambda<T, ?>... columnLambdas) {
         if (columns == null) {
             columns = new ArrayList<>();
         }
@@ -104,7 +103,7 @@ public class Select<T> extends Condition<T, ColumnLambda<T, ?>, Select<T>> {
         return this;
     }
 
-    public Select<T> columns(ColumnLambda<T, ?> columnLambda) {
+    public LambdaSelect<T> columns(ColumnLambda<T, ?> columnLambda) {
         if (columns == null) {
             columns = new ArrayList<>();
         }
@@ -114,7 +113,7 @@ public class Select<T> extends Condition<T, ColumnLambda<T, ?>, Select<T>> {
         return this;
     }
 
-    public Select<T> columns(String[] columns) {
+    public LambdaSelect<T> columns(String[] columns) {
         String columnName;
         for (String column : columns) {
             columnName = meta.getColumnName(column);
